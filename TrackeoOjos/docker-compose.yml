@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  spark-master:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  spark-worker:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+
+  app:
+    build: .
+    container_name: trackerojos-app
+    ports:
+      - "5000:5000"  
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - spark-master
+    command: python capture.py
+
+  visualizer:
+    build: .
+    container_name: trackerojos-visualizer
+    command: streamlit run visualize.py --server.port=8501 --server.enableCORS=false
+    ports:
+      - "8501:8501"
+    depends_on:
+      - app
+    volumes:
+      - ./data:/app/data
